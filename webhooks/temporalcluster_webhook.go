@@ -300,6 +300,33 @@ func (w *TemporalClusterWebhook) validateCluster(cluster *v1beta1.TemporalCluste
 		}
 	}
 
+	// Validate SQL passwordCommand usage. It resolves the datastore password by
+	// running an external command and is only supported by Temporal >= 1.31.
+	for name, store := range cluster.Spec.Persistence.GetDatastoresMap() {
+		if store == nil || store.SQL == nil || store.SQL.PasswordCommand == nil {
+			continue
+		}
+		path := field.NewPath("spec", "persistence", name, "sql", "passwordCommand")
+		if !cluster.Spec.Version.GreaterOrEqual(version.V1_31_0) {
+			errs = append(errs, field.Forbidden(
+				path,
+				"sql.passwordCommand requires Temporal >= 1.31.0.",
+			))
+		}
+		if store.PasswordSecretRef != nil {
+			errs = append(errs, field.Forbidden(
+				path,
+				"sql.passwordCommand is mutually exclusive with passwordSecretRef.",
+			))
+		}
+		if store.SQL.PasswordCommand.Command == "" {
+			errs = append(errs, field.Required(
+				path.Child("command"),
+				"command is required when passwordCommand is set.",
+			))
+		}
+	}
+
 	// Check for per unit histogram boundaries if metrics is enabled
 	if cluster.Spec.Metrics.IsEnabled() && cluster.Spec.Metrics.PerUnitHistogramBoundaries != nil {
 		p := cluster.Spec.Metrics.PerUnitHistogramBoundaries
