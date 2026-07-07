@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+Improvements:
+- Add support for Temporal Server v1.29.x. Temporal v1.29 introduces only dynamic-config changes (task-queue fairness, task-queue config API), which are already supported through the cluster `dynamicConfig` field.
+- Add support for Temporal Server v1.30.x. The default Temporal version is now `1.30.5`, the default Temporal UI version is now `2.48.1`, and the supported version range is extended to `< 1.31.0`.
+  - Temporal v1.30 removed `dockerize`/`auto-setup` from the `temporalio/server` image and moved config-template rendering into the server binary (embedded sprig engine). For clusters running `>= 1.30`, the operator now emits config templates with the `# enable-template` header and sprig `{{ env "NAME" }}` placeholders (instead of the dockerize `{{ .Env.NAME }}` syntax), sets `TEMPORAL_SERVER_CONFIG_FILE_PATH`, and selects the service to start through the new `TEMPORAL_SERVICES` environment variable (the legacy `SERVICES` variable is still set for backward compatibility).
+  - Temporal v1.30 also removed `curl` and `jq` from the `temporalio/admin-tools` image, which broke the operator's Elasticsearch visibility setup scripts. For clusters `>= 1.30` the operator now drives ES visibility setup/upgrade through the `temporal-elasticsearch-tool` shipped in the image (`setup-schema`, `create-index`, `update-schema`), analogous to `temporal-sql-tool`. Its embedded index template applies all built-in search attributes automatically. The MTLS sidecar-shutdown step now uses `wget` instead of `curl` on `>= 1.30`. Clusters `< 1.30` keep the previous `curl`-based scripts.
+- Broken releases: `v1.30.0` has no published GitHub release upstream (silently skipped) and is now rejected; use `v1.30.1+`.
+- Add support for Temporal Server v1.31.x. The default Temporal version is now `1.31.1`, the default Temporal UI version is now `2.49.1`, and the supported version range is extended to `< 1.32.0`.
+  - New `sql.passwordCommand` field on datastores (Temporal >= 1.31): resolves the datastore password by running an external command, e.g. to generate a short-lived cloud IAM auth token (AWS RDS / GCP Cloud SQL). Mutually exclusive with `passwordSecretRef`; validated by the webhook. The password is wired both into the server config (native support) and into the persistence schema-setup jobs, where the generated `temporal-sql-tool` invocation resolves it through a shell command substitution.
+  - Elasticsearch visibility on `>= 1.31` uses the `temporal-elasticsearch-tool` path introduced for `>= 1.30` (see the 1.30 entry); its embedded index template applies all built-in search attributes up to v14 (including `TemporalExternalPayloadSizeBytes`/`TemporalExternalPayloadCount`) automatically.
+
+Updates:
+- Bump `go.temporal.io/server` to v1.31.1, `go.temporal.io/api` to v1.62.8, `go.temporal.io/sdk` to v1.41.1.
+
 ## 0.12.2
 
 **Release date:** 2023-04-02

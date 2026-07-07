@@ -129,7 +129,7 @@ spec:
                             Claims lists the names of resources, defined in spec.resourceClaims,
                             that are used by this container.
 
-                            This is an alpha field and requires enabling the
+                            This field depends on the
                             DynamicResourceAllocation feature gate.
 
                             This field is immutable. It can only be set for containers.
@@ -486,7 +486,7 @@ spec:
                         Claims lists the names of resources, defined in spec.resourceClaims,
                         that are used by this container.
 
-                        This is an alpha field and requires enabling the
+                        This field depends on the
                         DynamicResourceAllocation feature gate.
 
                         This field is immutable. It can only be set for containers.
@@ -2166,6 +2166,31 @@ spec:
                             maxIdleConns:
                               description: MaxIdleConns is the max number of idle connections to this datastore.
                               type: integer
+                            passwordCommand:
+                              description: |-
+                                PasswordCommand executes an external command whose standard output is used
+                                as the datastore password, for instance to generate a short-lived cloud IAM
+                                auth token (AWS RDS, GCP Cloud SQL). Mutually exclusive with the datastore
+                                passwordSecretRef. When the command returns an expiring token, set
+                                maxConnLifetime so connections are recycled before the token expires.
+                                Requires Temporal >= 1.31.0.
+                              properties:
+                                args:
+                                  description: Args is the list of arguments passed to the command.
+                                  items:
+                                    type: string
+                                  type: array
+                                command:
+                                  description: Command is the path to the executable to run.
+                                  type: string
+                                timeout:
+                                  description: |-
+                                    Timeout is the maximum duration to wait for the command to complete.
+                                    Defaults to 30 seconds if unset.
+                                  type: string
+                              required:
+                                - command
+                              type: object
                             pluginName:
                               description: PluginName is the name of SQL plugin.
                               enum:
@@ -2404,6 +2429,31 @@ spec:
                             maxIdleConns:
                               description: MaxIdleConns is the max number of idle connections to this datastore.
                               type: integer
+                            passwordCommand:
+                              description: |-
+                                PasswordCommand executes an external command whose standard output is used
+                                as the datastore password, for instance to generate a short-lived cloud IAM
+                                auth token (AWS RDS, GCP Cloud SQL). Mutually exclusive with the datastore
+                                passwordSecretRef. When the command returns an expiring token, set
+                                maxConnLifetime so connections are recycled before the token expires.
+                                Requires Temporal >= 1.31.0.
+                              properties:
+                                args:
+                                  description: Args is the list of arguments passed to the command.
+                                  items:
+                                    type: string
+                                  type: array
+                                command:
+                                  description: Command is the path to the executable to run.
+                                  type: string
+                                timeout:
+                                  description: |-
+                                    Timeout is the maximum duration to wait for the command to complete.
+                                    Defaults to 30 seconds if unset.
+                                  type: string
+                              required:
+                                - command
+                              type: object
                             pluginName:
                               description: PluginName is the name of SQL plugin.
                               enum:
@@ -2644,6 +2694,31 @@ spec:
                             maxIdleConns:
                               description: MaxIdleConns is the max number of idle connections to this datastore.
                               type: integer
+                            passwordCommand:
+                              description: |-
+                                PasswordCommand executes an external command whose standard output is used
+                                as the datastore password, for instance to generate a short-lived cloud IAM
+                                auth token (AWS RDS, GCP Cloud SQL). Mutually exclusive with the datastore
+                                passwordSecretRef. When the command returns an expiring token, set
+                                maxConnLifetime so connections are recycled before the token expires.
+                                Requires Temporal >= 1.31.0.
+                              properties:
+                                args:
+                                  description: Args is the list of arguments passed to the command.
+                                  items:
+                                    type: string
+                                  type: array
+                                command:
+                                  description: Command is the path to the executable to run.
+                                  type: string
+                                timeout:
+                                  description: |-
+                                    Timeout is the maximum duration to wait for the command to complete.
+                                    Defaults to 30 seconds if unset.
+                                  type: string
+                              required:
+                                - command
+                              type: object
                             pluginName:
                               description: PluginName is the name of SQL plugin.
                               enum:
@@ -2882,6 +2957,31 @@ spec:
                             maxIdleConns:
                               description: MaxIdleConns is the max number of idle connections to this datastore.
                               type: integer
+                            passwordCommand:
+                              description: |-
+                                PasswordCommand executes an external command whose standard output is used
+                                as the datastore password, for instance to generate a short-lived cloud IAM
+                                auth token (AWS RDS, GCP Cloud SQL). Mutually exclusive with the datastore
+                                passwordSecretRef. When the command returns an expiring token, set
+                                maxConnLifetime so connections are recycled before the token expires.
+                                Requires Temporal >= 1.31.0.
+                              properties:
+                                args:
+                                  description: Args is the list of arguments passed to the command.
+                                  items:
+                                    type: string
+                                  type: array
+                                command:
+                                  description: Command is the path to the executable to run.
+                                  type: string
+                                timeout:
+                                  description: |-
+                                    Timeout is the maximum duration to wait for the command to complete.
+                                    Defaults to 30 seconds if unset.
+                                  type: string
+                              required:
+                                - command
+                              type: object
                             pluginName:
                               description: PluginName is the name of SQL plugin.
                               enum:
@@ -3077,7 +3177,7 @@ spec:
                                 Claims lists the names of resources, defined in spec.resourceClaims,
                                 that are used by this container.
 
-                                This is an alpha field and requires enabling the
+                                This field depends on the
                                 DynamicResourceAllocation feature gate.
 
                                 This field is immutable. It can only be set for containers.
@@ -3244,7 +3344,7 @@ spec:
                                 Claims lists the names of resources, defined in spec.resourceClaims,
                                 that are used by this container.
 
-                                This is an alpha field and requires enabling the
+                                This field depends on the
                                 DynamicResourceAllocation feature gate.
 
                                 This field is immutable. It can only be set for containers.
@@ -3417,7 +3517,7 @@ spec:
                                 Claims lists the names of resources, defined in spec.resourceClaims,
                                 that are used by this container.
 
-                                This is an alpha field and requires enabling the
+                                This field depends on the
                                 DynamicResourceAllocation feature gate.
 
                                 This field is immutable. It can only be set for containers.
@@ -3584,7 +3684,7 @@ spec:
                                 Claims lists the names of resources, defined in spec.resourceClaims,
                                 that are used by this container.
 
-                                This is an alpha field and requires enabling the
+                                This field depends on the
                                 DynamicResourceAllocation feature gate.
 
                                 This field is immutable. It can only be set for containers.
@@ -3814,7 +3914,7 @@ spec:
                                 Claims lists the names of resources, defined in spec.resourceClaims,
                                 that are used by this container.
 
-                                This is an alpha field and requires enabling the
+                                This field depends on the
                                 DynamicResourceAllocation feature gate.
 
                                 This field is immutable. It can only be set for containers.
@@ -3998,7 +4098,7 @@ spec:
                             Claims lists the names of resources, defined in spec.resourceClaims,
                             that are used by this container.
 
-                            This is an alpha field and requires enabling the
+                            This field depends on the
                             DynamicResourceAllocation feature gate.
 
                             This field is immutable. It can only be set for containers.
