@@ -39,7 +39,7 @@ type LogSpec struct {
 	// Stdout is true if the output needs to goto standard out; default is stderr.
 	// +optional
 	// +kubebuilder:default=true
-	Stdout *bool `json:"stdout"`
+	Stdout *bool `json:"stdout,omitempty"`
 	// Level is the desired log level; see colocated zap_logger.go::parseZapLevel()
 	// +optional
 	// +kubebuilder:validation:Enum=debug;info;warn;error;dpanic;panic;fatal
@@ -71,7 +71,7 @@ type ServiceSpec struct {
 	// 7235 for Matching service
 	// 7239 for Worker service
 	// +optional
-	Port *int32 `json:"port"`
+	Port *int32 `json:"port,omitempty"`
 	// MembershipPort defines a custom membership port for the service.
 	// Default values are:
 	// 6933 for Frontend service
@@ -79,16 +79,16 @@ type ServiceSpec struct {
 	// 6935 for Matching service
 	// 6939 for Worker service
 	// +optional
-	MembershipPort *int32 `json:"membershipPort"`
+	MembershipPort *int32 `json:"membershipPort,omitempty"`
 	// HTTPPort defines a custom http port for the service.
 	// Default values are:
 	// 7243 for Frontend service
 	// +optional
-	HTTPPort *int32 `json:"httpPort"`
+	HTTPPort *int32 `json:"httpPort,omitempty"`
 	// Number of desired replicas for the service. Default to 1.
 	// +kubebuilder:validation:Minimum=1
 	// +optional
-	Replicas *int32 `json:"replicas"`
+	Replicas *int32 `json:"replicas,omitempty"`
 	// Compute Resources required by this service.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
@@ -318,12 +318,12 @@ type CassandraConsistencySpec struct {
 	// Values identical to gocql Consistency values. (defaults to LOCAL_QUORUM if not set).
 	// +kubebuilder:validation:Enum=ANY;ONE;TWO;THREE;QUORUM;ALL;LOCAL_QUORUM;EACH_QUORUM;LOCAL_ONE
 	// +optional
-	Consistency *gocql.Consistency `json:"consistency"`
+	Consistency *gocql.Consistency `json:"consistency,omitempty"`
 	// SerialConsistency sets the consistency for the serial prtion of queries. Values identical to gocql SerialConsistency values.
 	// (defaults to LOCAL_SERIAL if not set)
 	// +kubebuilder:validation:Enum=SERIAL;LOCAL_SERIAL
 	// +optional
-	SerialConsistency *gocql.SerialConsistency `json:"serialConsistency"`
+	SerialConsistency *gocql.SerialConsistency `json:"serialConsistency,omitempty"`
 }
 
 // CassandraSpec contains cassandra datastore connections specifications.
@@ -344,7 +344,7 @@ type CassandraSpec struct {
 	MaxConns int `json:"maxConns"`
 	// ConnectTimeout is a timeout for initial dial to cassandra server.
 	// +optional
-	ConnectTimeout *metav1.Duration `json:"connectTimeout"`
+	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty"`
 	// Consistency configuration.
 	// +optional
 	Consistency *CassandraConsistencySpec `json:"consistency,omitempty"`
@@ -560,7 +560,7 @@ type TemporalUISpec struct {
 	// Number of desired replicas for the ui. Default to 1.
 	// +kubebuilder:validation:Minimum=1
 	// +optional
-	Replicas *int32 `json:"replicas"`
+	Replicas *int32 `json:"replicas,omitempty"`
 	// Compute Resources required by the ui.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
@@ -667,23 +667,23 @@ type CertificatesDurationSpec struct {
 	// RootCACertificate is the 'duration' (i.e. lifetime) of the Root CA Certificate.
 	// It defaults to 10 years.
 	// +optional
-	RootCACertificate *metav1.Duration `json:"rootCACertificate"` //nolint:tagliatelle
+	RootCACertificate *metav1.Duration `json:"rootCACertificate,omitempty"` //nolint:tagliatelle
 	// IntermediateCACertificates is the 'duration' (i.e. lifetime) of the intermediate CAs Certificates.
 	// It defaults to 5 years.
 	// +optional
-	IntermediateCAsCertificates *metav1.Duration `json:"intermediateCAsCertificates"`
+	IntermediateCAsCertificates *metav1.Duration `json:"intermediateCAsCertificates,omitempty"`
 	// ClientCertificates is the 'duration' (i.e. lifetime) of the client certificates.
 	// It defaults to 1 year.
 	// +optional
-	ClientCertificates *metav1.Duration `json:"clientCertificates"`
+	ClientCertificates *metav1.Duration `json:"clientCertificates,omitempty"`
 	// FrontendCertificate is the 'duration' (i.e. lifetime) of the frontend certificate.
 	// It defaults to 1 year.
 	// +optional
-	FrontendCertificate *metav1.Duration `json:"frontendCertificate"`
+	FrontendCertificate *metav1.Duration `json:"frontendCertificate,omitempty"`
 	// InternodeCertificate is the 'duration' (i.e. lifetime) of the internode certificate.
 	// It defaults to 1 year.
 	// +optional
-	InternodeCertificate *metav1.Duration `json:"internodeCertificate"`
+	InternodeCertificate *metav1.Duration `json:"internodeCertificate,omitempty"`
 }
 
 // MTLSSpec defines parameters for the temporal encryption in transit with mTLS.
@@ -709,7 +709,7 @@ type MTLSSpec struct {
 	// Defaults to 1 hour.
 	// Useless if mTLS provider is not cert-manager.
 	// +optional
-	RefreshInterval *metav1.Duration `json:"refreshInterval"`
+	RefreshInterval *metav1.Duration `json:"refreshInterval,omitempty"`
 	// RenewBefore is defines how long before the currently issued certificate's expiry
 	// cert-manager should renew the certificate. The default is 2/3 of the
 	// issued certificate's duration. Minimum accepted value is 5 minutes.
@@ -835,7 +835,7 @@ type DynamicConfigSpec struct {
 	// PollInterval defines how often the config should be updated by checking provided values.
 	// Defaults to 10s.
 	// +optional
-	PollInterval *metav1.Duration `json:"pollInterval"`
+	PollInterval *metav1.Duration `json:"pollInterval,omitempty"`
 	// Values contains all dynamic config keys and their constrained values.
 	Values map[string][]ConstrainedValue `json:"values"`
 }
@@ -958,12 +958,12 @@ type AuthorizationSpecJWTKeyProvider struct {
 	// KeySourceURIs is a list of URIs where the JWT signing keys can be obtained. These URIs are used by the
 	// authorization system to fetch the public keys necessary for validating JWT tokens.
 	// +optional
-	KeySourceURIs []string `json:"keySourceURIs"`
+	KeySourceURIs []string `json:"keySourceURIs,omitempty"`
 
 	// RefreshInterval defines the time interval at which temporal should refresh the JWT signing keys from
 	// the specified URIs.
 	// +optional
-	RefreshInterval *metav1.Duration `json:"refreshInterval"`
+	RefreshInterval *metav1.Duration `json:"refreshInterval,omitempty"`
 }
 
 // S3Archiver is the S3 archival provider configuration.
@@ -1014,7 +1014,7 @@ type TemporalClusterSpec struct {
 	// Version defines the temporal version the cluster to be deployed.
 	// This version impacts the underlying persistence schemas versions.
 	// +optional
-	Version *version.Version `json:"version"`
+	Version *version.Version `json:"version,omitempty"`
 	// Log defines temporal cluster's logger configuration.
 	// +optional
 	Log *LogSpec `json:"log,omitempty"`
@@ -1023,7 +1023,7 @@ type TemporalClusterSpec struct {
 	// +optional
 	//+kubebuilder:default:=300
 	//+kubebuilder:validation:Minimum=1
-	JobTTLSecondsAfterFinished *int32 `json:"jobTtlSecondsAfterFinished"`
+	JobTTLSecondsAfterFinished *int32 `json:"jobTtlSecondsAfterFinished,omitempty"`
 	// JobResources allows set resources for setup/update jobs.
 	// +optional
 	JobResources corev1.ResourceRequirements `json:"jobResources,omitempty"`
@@ -1098,7 +1098,7 @@ type TemporalPersistenceStatus struct {
 	VisibilityStore *DatastoreStatus `json:"visibilityStore"`
 	// SecondaryVisibilityStore holds the secondary visibility datastore status.
 	// +optional
-	SecondaryVisibilityStore *DatastoreStatus `json:"secondaryVisibilityStore"`
+	SecondaryVisibilityStore *DatastoreStatus `json:"secondaryVisibilityStore,omitempty"`
 	// AdvancedVisibilityStore holds the advanced visibility datastore status.
 	// +optional
 	AdvancedVisibilityStore *DatastoreStatus `json:"advancedVisibilityStore,omitempty"`
