@@ -38,6 +38,8 @@ const (
 )
 
 // SetTemporalClusterReconcileSuccess sets the ReconcileSuccessCondition status for a temporal cluster.
+// On a successful reconciliation it also reports the ReconcileErrorCondition as false,
+// so that errors from previous reconcile cycles don't stay reported forever.
 func SetTemporalClusterReconcileSuccess(c *TemporalCluster, status metav1.ConditionStatus, reason, message string) {
 	condition := metav1.Condition{
 		Type:               ReconcileSuccessCondition,
@@ -48,6 +50,9 @@ func SetTemporalClusterReconcileSuccess(c *TemporalCluster, status metav1.Condit
 		Message:            message,
 	}
 	apimeta.SetStatusCondition(&c.Status.Conditions, condition)
+	if status == metav1.ConditionTrue {
+		SetTemporalClusterReconcileError(c, metav1.ConditionFalse, ReconcileSuccessReason, "")
+	}
 }
 
 // SetTemporalClusterReconcileError sets the ReconcileErrorCondition status for a temporal cluster.
@@ -109,6 +114,8 @@ func SetTemporalScheduleReady(s *TemporalSchedule, status metav1.ConditionStatus
 }
 
 // SetTemporalNamespaceReconcileSuccess sets the ReconcileSuccessCondition status for a temporal namespace.
+// On a successful reconciliation it also reports the ReconcileErrorCondition as false,
+// so that errors from previous reconcile cycles don't stay reported forever.
 func SetTemporalNamespaceReconcileSuccess(n *TemporalNamespace, status metav1.ConditionStatus, reason, message string) {
 	condition := metav1.Condition{
 		Type:               ReconcileSuccessCondition,
@@ -119,9 +126,14 @@ func SetTemporalNamespaceReconcileSuccess(n *TemporalNamespace, status metav1.Co
 		Message:            message,
 	}
 	apimeta.SetStatusCondition(&n.Status.Conditions, condition)
+	if status == metav1.ConditionTrue {
+		SetTemporalNamespaceReconcileError(n, metav1.ConditionFalse, ReconcileSuccessReason, "")
+	}
 }
 
 // SetTemporalScheduleReconcileSuccess sets the ReconcileSuccessCondition status for a temporal schedule.
+// On a successful reconciliation it also reports the ReconcileErrorCondition as false,
+// so that errors from previous reconcile cycles don't stay reported forever.
 func SetTemporalScheduleReconcileSuccess(s *TemporalSchedule, status metav1.ConditionStatus, reason, message string) {
 	condition := metav1.Condition{
 		Type:               ReconcileSuccessCondition,
@@ -132,6 +144,9 @@ func SetTemporalScheduleReconcileSuccess(s *TemporalSchedule, status metav1.Cond
 		Message:            message,
 	}
 	apimeta.SetStatusCondition(&s.Status.Conditions, condition)
+	if status == metav1.ConditionTrue {
+		SetTemporalScheduleReconcileError(s, metav1.ConditionFalse, ReconcileSuccessReason, "")
+	}
 }
 
 // SetTemporalNamespaceReconcileError sets the ReconcileErrorCondition status for a temporal namespace.
