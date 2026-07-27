@@ -498,6 +498,259 @@ func TestApplyDeploymentOverrides(t *testing.T) {
 				},
 			},
 		},
+		"add env var to existing env using strategic merge": {
+			original: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "service",
+									Env: []corev1.EnvVar{
+										{
+											Name: "POD_IP",
+											ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													FieldPath: "status.podIP",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			override: &v1beta1.DeploymentOverride{
+				Spec: &v1beta1.DeploymentOverrideSpec{
+					Template: &v1beta1.PodTemplateSpecOverride{
+						Spec: &apiextensionsv1.JSON{
+							Raw: []byte(`{"containers":[{"name":"service","env":[{"name":"MY_VAR","value":"my-value"}]}]}`),
+						},
+					},
+				},
+			},
+			expected: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "service",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "MY_VAR",
+											Value: "my-value",
+										},
+										{
+											Name: "POD_IP",
+											ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													FieldPath: "status.podIP",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"add secret volume to existing volumes using strategic merge": {
+			original: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "service",
+								},
+							},
+							Volumes: []corev1.Volume{
+								{
+									Name: "config",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			override: &v1beta1.DeploymentOverride{
+				Spec: &v1beta1.DeploymentOverrideSpec{
+					Template: &v1beta1.PodTemplateSpecOverride{
+						Spec: &apiextensionsv1.JSON{
+							Raw: []byte(`{"volumes":[{"name":"secrets","secret":{"secretName":"my-secret"}}]}`),
+						},
+					},
+				},
+			},
+			expected: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "service",
+								},
+							},
+							Volumes: []corev1.Volume{
+								{
+									Name: "secrets",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: "my-secret",
+										},
+									},
+								},
+								{
+									Name: "config",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"remove env var using json patch": {
+			original: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "service",
+									Env: []corev1.EnvVar{
+										{
+											Name: "POD_IP",
+											ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													FieldPath: "status.podIP",
+												},
+											},
+										},
+										{
+											Name:  "MY_VAR",
+											Value: "my-value",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			override: &v1beta1.DeploymentOverride{
+				JSONPatch: &apiextensionsv1.JSON{
+					Raw: []byte(`[{"op":"remove", "path":"/spec/template/spec/containers/0/env/0"}]`),
+				},
+			},
+			expected: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "service",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "MY_VAR",
+											Value: "my-value",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"merge pod template labels and annotations": {
+			original: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"a": "b",
+							},
+							Annotations: map[string]string{
+								"c": "d",
+							},
+						},
+					},
+				},
+			},
+			override: &v1beta1.DeploymentOverride{
+				Spec: &v1beta1.DeploymentOverrideSpec{
+					Template: &v1beta1.PodTemplateSpecOverride{
+						ObjectMetaOverride: &v1beta1.ObjectMetaOverride{
+							Labels: map[string]string{
+								"e": "f",
+							},
+							Annotations: map[string]string{
+								"g": "h",
+							},
+						},
+					},
+				},
+			},
+			expected: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"a": "b",
+								"e": "f",
+							},
+							Annotations: map[string]string{
+								"c": "d",
+								"g": "h",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, test := range tests {

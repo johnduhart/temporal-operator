@@ -83,7 +83,17 @@ func ApplyPodTemplateSpecOverrides(podTemplate *corev1.PodTemplateSpec, override
 		if err != nil {
 			return fmt.Errorf("can't patch pod template spec: %w", err)
 		}
-		return json.Unmarshal(patched, &podTemplate.Spec)
+
+		// Unmarshal into a zeroed spec rather than the still-populated one:
+		// json.Unmarshal merges JSON arrays element-wise into existing slice
+		// elements, so patched list entries would inherit leftover fields
+		// (e.g. an env var ending up with both value and valueFrom).
+		patchedSpec := corev1.PodSpec{}
+		err = json.Unmarshal(patched, &patchedSpec)
+		if err != nil {
+			return fmt.Errorf("can't unmarshal patched pod template spec: %w", err)
+		}
+		podTemplate.Spec = patchedSpec
 	}
 	return nil
 }
@@ -126,7 +136,16 @@ func ApplyDeploymentOverrides(deployment *appsv1.Deployment, override *v1beta1.D
 		if err != nil {
 			return fmt.Errorf("can't apply json patch: %w", err)
 		}
-		return json.Unmarshal(patched, &deployment)
+
+		// Unmarshal into a zeroed deployment for the same reason as above:
+		// decoding into the populated one would merge patched list elements
+		// with leftover fields from the previous elements.
+		patchedDeployment := appsv1.Deployment{}
+		err = json.Unmarshal(patched, &patchedDeployment)
+		if err != nil {
+			return fmt.Errorf("can't unmarshal patched deployment: %w", err)
+		}
+		*deployment = patchedDeployment
 	}
 
 	return nil
