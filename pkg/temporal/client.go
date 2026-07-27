@@ -69,13 +69,14 @@ func GetTlSConfigFromSecret(secret *corev1.Secret) (*tls.Config, error) {
 	}, nil
 }
 
-// GetClusterClientTLSConfig returns the tls configuration for the provided temporal cluster.
-func GetClusterClientTLSConfig(ctx context.Context, client client.Client, cluster *v1beta1.TemporalCluster) (*tls.Config, error) {
+// getClientTLSConfig returns a client tls configuration using the certificate
+// held in the provided secret and the provided server name.
+func getClientTLSConfig(ctx context.Context, client client.Client, namespace, secretName, serverName string) (*tls.Config, error) {
 	secret := &corev1.Secret{}
 
 	err := client.Get(ctx, types.NamespacedName{
-		Name:      cluster.ChildResourceName(certmanager.FrontendCertificate),
-		Namespace: cluster.GetNamespace(),
+		Name:      secretName,
+		Namespace: namespace,
 	}, secret)
 	if err != nil {
 		return nil, err
@@ -86,16 +87,44 @@ func GetClusterClientTLSConfig(ctx context.Context, client client.Client, cluste
 		return nil, err
 	}
 
-	tlsConfig.ServerName = cluster.Spec.MTLS.Frontend.ServerName(cluster)
+	tlsConfig.ServerName = serverName
 	return tlsConfig, nil
+}
+
+// GetClusterClientTLSConfig returns the tls configuration for the provided temporal cluster.
+func GetClusterClientTLSConfig(ctx context.Context, client client.Client, cluster *v1beta1.TemporalCluster) (*tls.Config, error) {
+	return getClientTLSConfig(ctx, client,
+		cluster.GetNamespace(),
+		cluster.ChildResourceName(certmanager.FrontendCertificate),
+		cluster.Spec.MTLS.Frontend.ServerName(cluster),
+	)
 }
 
 func buildClusterClientOptions(ctx context.Context, client client.Client, cluster *v1beta1.TemporalCluster, overrides ...ClientOption) (temporalclient.Options, error) {
 	opts := temporalclient.Options{
-		HostPort: cluster.GetPublicClientAddress(),
+		HostPort: cluster.GetOperatorClientAddress(),
 		Logger:   temporallog.NewTemporalSDKLogFromContext(ctx),
 	}
-	if cluster.MTLSWithCertManagerEnabled() && cluster.Spec.MTLS.FrontendEnabled() {
+
+	internalFrontendEnabled := cluster.Spec.Services != nil && cluster.Spec.Services.InternalFrontend.IsEnabled()
+
+	switch {
+	case internalFrontendEnabled && cluster.MTLSWithCertManagerEnabled() && cluster.Spec.MTLS.InternodeEnabled():
+		// The internal frontend is served using the internode mTLS settings,
+		// so authenticate using the internode certificate.
+		tlsConfig, err := getClientTLSConfig(ctx, client,
+			cluster.GetNamespace(),
+			cluster.ChildResourceName(certmanager.InternodeCertificate),
+			cluster.Spec.MTLS.Internode.ServerName(cluster),
+		)
+		if err != nil {
+			return opts, fmt.Errorf("can't get cluster TLS config: %w", err)
+		}
+		opts.ConnectionOptions.TLS = tlsConfig
+	case internalFrontendEnabled:
+		// The internal frontend serves plaintext when internode mTLS is disabled,
+		// even if frontend mTLS is enabled.
+	case cluster.MTLSWithCertManagerEnabled() && cluster.Spec.MTLS.FrontendEnabled():
 		tlsConfig, err := GetClusterClientTLSConfig(ctx, client, cluster)
 		if err != nil {
 			return opts, fmt.Errorf("can't get cluster TLS config: %w", err)

@@ -1193,6 +1193,17 @@ func (c *TemporalCluster) GetPublicClientAddress() string {
 	return fmt.Sprintf("%s.%s:%d", c.ChildResourceName("frontend"), c.GetNamespace(), *c.Spec.Services.Frontend.Port)
 }
 
+// GetOperatorClientAddress returns the address the operator uses for its own connections to the cluster.
+// It always prefers the internal frontend when it's enabled, even when frontend mTLS is enabled:
+// the internal frontend is served using the internode mTLS settings, so the frontend mTLS
+// configuration doesn't apply to it.
+func (c *TemporalCluster) GetOperatorClientAddress() string {
+	if c.Spec.Services != nil && c.Spec.Services.InternalFrontend.IsEnabled() {
+		return fmt.Sprintf("%s.%s:%d", c.ChildResourceName("internal-frontend-headless"), c.GetNamespace(), *c.Spec.Services.InternalFrontend.Port)
+	}
+	return c.GetPublicClientAddress()
+}
+
 // IsReady returns true if the TemporalCluster's conditions reports it ready.
 func (c *TemporalCluster) IsReady() bool {
 	for _, condition := range c.Status.Conditions {
