@@ -174,6 +174,19 @@ helm: helm-docs manifests artifacts
 	cp ${RELEASE_PATH}/temporal-operator.crds.yaml charts/temporal-operator/crds
 	$(HELM_DOCS) --chart-search-root=charts/temporal-operator --template-files=hack/helm/template/README.md.gotmpl
 
+.PHONY: verify-chart-crds
+verify-chart-crds: kustomize ## Verify the chart's bundled CRDs are in sync with config/crd.
+	@generated=$$(mktemp); \
+	$(KUSTOMIZE) build config/crd > $$generated; \
+	if ! diff -u charts/temporal-operator/crds/temporal-operator.crds.yaml $$generated; then \
+		rm -f $$generated; \
+		echo ""; \
+		echo "ERROR: charts/temporal-operator/crds/temporal-operator.crds.yaml is out of sync with config/crd."; \
+		echo "Regenerate it with: make artifacts && cp out/release/artifacts/temporal-operator.crds.yaml charts/temporal-operator/crds/"; \
+		exit 1; \
+	fi; \
+	rm -f $$generated
+
 .PHONY: bundle
 bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q

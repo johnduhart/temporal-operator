@@ -56,3 +56,14 @@ jobs:
           check-latest: true
       - name: test
         run: make test
+  chart-crds:
+    name: Check chart CRDs are in sync
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+      - name: verify
+        run: make verify-chart-crds
