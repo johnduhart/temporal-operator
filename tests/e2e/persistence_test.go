@@ -140,7 +140,22 @@ func TestPersistence(t *testing.T) {
 				}
 			},
 		},
-		"postgres persistence with ES advanced visibility": {
+		// This case was dead *and* invalid before the skip filter above was
+		// removed. It declared spec.persistence.advancedVisibilityStore, which
+		// the webhook has forbidden for clusters >= 1.24 since 84722d5
+		// (2024-09-26) -- "advanced visibility" became plain visibility in
+		// Temporal 1.24 -- while creating the cluster at 1.24.3. Admission would
+		// have rejected it. The skip filter arrived later, in 624c28f
+		// (2024-12-01), and hid that.
+		//
+		// It is revived here in the supported shape: Elasticsearch as the
+		// visibility store. It also runs at defaultVersion (>= 1.30) rather than
+		// 1.24.3, because that is where the ES code actually needs coverage:
+		// admin-tools >= 1.30 dropped curl/jq and the operator drives ES through
+		// temporal-elasticsearch-tool instead, which had no e2e coverage at all.
+		// Nothing is lost by not exercising the older curl path here, since this
+		// case has not run since 2024.
+		"postgres persistence with ES visibility": {
 			upgradePath:        []string{},
 			deployDependencies: []deployDependencyFunc{deployAndWaitForPostgres, deployAndWaitForElasticSearch},
 			cluster: func(_ context.Context, _ *envconf.Config, namespace string) *v1beta1.TemporalCluster {
@@ -154,7 +169,7 @@ func TestPersistence(t *testing.T) {
 					Spec: v1beta1.TemporalClusterSpec{
 						NumHistoryShards:           1,
 						JobTTLSecondsAfterFinished: &jobTTL,
-						Version:                    version.MustNewVersionFromString(newDatastoreVersion),
+						Version:                    defaultVersion,
 						Persistence: v1beta1.TemporalPersistenceSpec{
 							DefaultStore: &v1beta1.DatastoreSpec{
 								SQL: &v1beta1.SQLSpec{
@@ -170,19 +185,6 @@ func TestPersistence(t *testing.T) {
 								},
 							},
 							VisibilityStore: &v1beta1.DatastoreSpec{
-								SQL: &v1beta1.SQLSpec{
-									User:            "temporal",
-									PluginName:      "postgres12",
-									DatabaseName:    "temporal_visibility",
-									ConnectAddr:     connectAddr,
-									ConnectProtocol: "tcp",
-								},
-								PasswordSecretRef: &v1beta1.SecretKeyReference{
-									Name: "postgres-password",
-									Key:  "PASSWORD",
-								},
-							},
-							AdvancedVisibilityStore: &v1beta1.DatastoreSpec{
 								Elasticsearch: &v1beta1.ElasticsearchSpec{
 									Version:  "v8",
 									URL:      "http://elasticsearch-es-http:9200",
@@ -340,12 +342,18 @@ func TestPersistence(t *testing.T) {
 		},
 	}
 
-	featureTable := []features.Feature{}
+	featureTable := make([]features.Feature, 0, len(tests))
 
+	// Every case runs. A filter that skipped all but "cassandra persistence"
+	// lived here from 624c28f (2024-12-01) until it was removed, which meant the
+	// pure-SQL upgrade paths -- the ones most deployments actually use -- were
+	// never exercised. The cassandra case does use postgres12 for its
+	// *visibility* store, so SQL visibility migrations had incidental coverage,
+	// but no case verified a SQL *default* store surviving an upgrade.
+	//
+	// This is the bulk of the suite's runtime: 35 version-steps across the six
+	// cases, against 8 when only cassandra ran. See E2E_TIMEOUT in the Makefile.
 	for name, testCase := range tests {
-		if name != "cassandra persistence" {
-			continue
-		}
 		test := testCase
 		feature := features.New(name).
 			Setup(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {

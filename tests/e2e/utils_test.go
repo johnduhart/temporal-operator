@@ -57,10 +57,9 @@ func deployAndWaitForTemporalWithPostgres(ctx context.Context, cfg *envconf.Conf
 		return nil, err
 	}
 
+	// defaultVersion is well above 1.24, and both arms of the branch that used
+	// to be here assigned the same plugin anyway.
 	pluginName := "postgres12"
-	if defaultVersion.GreaterOrEqual(version.V1_24_0) {
-		pluginName = "postgres12"
-	}
 
 	connectAddr := fmt.Sprintf("postgres.%s:5432", namespace) // create the temporal cluster
 	cluster := &v1beta1.TemporalCluster{
