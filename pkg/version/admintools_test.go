@@ -49,6 +49,24 @@ func TestDefaultAdminToolTag(t *testing.T) {
 			expected: "1.26",
 		},
 		{
+			name:     "Version 1.29.7",
+			version:  version.MustNewVersionFromString("1.29.7"),
+			expected: "1.29",
+		},
+		{
+			// 1.30 is where the admin-tools image was stripped to bare alpine
+			// (no curl/jq) and gained temporal-elasticsearch-tool. The tag
+			// scheme is unchanged, so the major.minor rule still applies.
+			name:     "Version 1.30.5",
+			version:  version.MustNewVersionFromString("1.30.5"),
+			expected: "1.30",
+		},
+		{
+			name:     "Version 1.31.1",
+			version:  version.MustNewVersionFromString("1.31.1"),
+			expected: "1.31",
+		},
+		{
 			name:     "Version 1.10.0",
 			version:  version.MustNewVersionFromString("1.10.0"),
 			expected: "1.10.0",
