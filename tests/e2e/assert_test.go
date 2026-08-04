@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -77,45 +78,80 @@ func AssertTemporalClusterCanBeUpgraded(v string) features.Func {
 	}
 }
 
+const (
+	// The cluster reporting Ready does not guarantee the frontend Service has
+	// stopped routing to a pod that is still terminating from the rolling
+	// update, so connecting and running a workflow is retried rather than
+	// failed on the first error.
+	//
+	// This became load-bearing when TestPersistence stopped skipping five of its
+	// six cases: the suite went from 8 upgrade steps to 35, and each step makes
+	// this assertion. A per-step failure rate small enough to go unnoticed at 8
+	// steps turns into a regularly red build at 35.
+	workflowAssertAttempts = 6
+	workflowAssertInterval = 10 * time.Second
+)
+
 func AssertClusterCanHandleWorkflows() features.Func {
 	return func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 		cluster := GetTemporalClusterForFeature(ctx)
-		connectAddr, closePortForward, err := forwardPortToTemporalFrontend(ctx, cfg, t, cluster)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer closePortForward()
 
-		t.Logf("Temporal frontend addr: %s", connectAddr)
+		var err error
+		for attempt := 1; attempt <= workflowAssertAttempts; attempt++ {
+			err = runGreetingWorkflow(ctx, cfg, t, cluster)
+			if err == nil {
+				return ctx
+			}
 
-		client := cfg.Client().Resources().GetControllerRuntimeClient()
-
-		clusterClient, err := temporal.GetClusterClient(ctx, client, cluster, temporal.WithHostPort(connectAddr))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		w, err := testworker.NewWorker(clusterClient)
-		if err != nil {
-			t.Fatal(err)
+			t.Logf("attempt %d/%d could not run a workflow: %v", attempt, workflowAssertAttempts, err)
+			if attempt < workflowAssertAttempts {
+				time.Sleep(workflowAssertInterval)
+			}
 		}
 
-		t.Log("Starting test worker")
-		err = w.Start()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		defer w.Stop()
-
-		t.Logf("Starting workflow")
-		err = teststarter.NewStarter(clusterClient).StartGreetingWorkflow()
-		if err != nil {
-			t.Fatal(err)
-		}
+		t.Fatalf("cluster could not handle workflows after %d attempts: %v", workflowAssertAttempts, err)
 
 		return ctx
 	}
+}
+
+// runGreetingWorkflow performs one full connect-worker-workflow cycle against
+// the cluster's frontend, returning an error instead of failing the test so the
+// caller can retry.
+func runGreetingWorkflow(ctx context.Context, cfg *envconf.Config, t *testing.T, cluster *v1beta1.TemporalCluster) error {
+	connectAddr, closePortForward, err := forwardPortToTemporalFrontend(ctx, cfg, t, cluster)
+	if err != nil {
+		return fmt.Errorf("can't forward port to frontend: %w", err)
+	}
+	defer closePortForward()
+
+	t.Logf("Temporal frontend addr: %s", connectAddr)
+
+	client := cfg.Client().Resources().GetControllerRuntimeClient()
+
+	clusterClient, err := temporal.GetClusterClient(ctx, client, cluster, temporal.WithHostPort(connectAddr))
+	if err != nil {
+		return fmt.Errorf("can't create cluster client: %w", err)
+	}
+
+	w, err := testworker.NewWorker(clusterClient)
+	if err != nil {
+		return fmt.Errorf("can't create test worker: %w", err)
+	}
+
+	t.Log("Starting test worker")
+	if err := w.Start(); err != nil {
+		return fmt.Errorf("can't start test worker: %w", err)
+	}
+
+	defer w.Stop()
+
+	t.Logf("Starting workflow")
+	if err := teststarter.NewStarter(clusterClient).StartGreetingWorkflow(); err != nil {
+		return fmt.Errorf("can't start greeting workflow: %w", err)
+	}
+
+	return nil
 }
 
 func AssertTemporalClusterWithMTLSCanHandleWorkflows() features.Func {
