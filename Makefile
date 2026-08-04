@@ -19,6 +19,16 @@ endif
 
 VERSION ?= "$(shell cat VERSION)"
 
+# Container tool used by the local-development targets. Prefers podman when it
+# is installed and falls back to docker, so a podman-only machine works without
+# extra flags while CI (docker) is unaffected. Override with CONTAINER_TOOL=...
+CONTAINER_TOOL ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
+
+# Wall-clock budget for the end-to-end suite. TestPersistence walks every
+# supported upgrade path for six datastore configurations, which is the bulk of
+# it; see the comment in tests/e2e/persistence_test.go.
+E2E_TIMEOUT ?= 90m
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -98,13 +108,13 @@ test: manifests generate fmt vet envtest ## Run tests.
 
 .PHONY: test-e2e
 test-e2e: artifacts ## Run end2end tests.
-	go test ./tests/e2e -v -timeout 60m -args "--v=4"
+	go test ./tests/e2e -v -timeout $(E2E_TIMEOUT) -args "--v=4"
 
 .PHONY: test-e2e-dev
 test-e2e-dev: artifacts ## Run end2end tests on dev computer using kind.
-	docker build -t temporal-operator .
-	docker save temporal-operator > /tmp/temporal-operator.tar
-	OPERATOR_IMAGE_PATH=/tmp/temporal-operator.tar go test ./tests/e2e -v -timeout 60m -args "-v=4"
+	$(CONTAINER_TOOL) build -t temporal-operator .
+	$(CONTAINER_TOOL) save temporal-operator > /tmp/temporal-operator.tar
+	OPERATOR_IMAGE_PATH=/tmp/temporal-operator.tar go test ./tests/e2e -v -timeout $(E2E_TIMEOUT) -args "-v=4"
 
 .PHONY: ensure-license
 ensure-license: go-licenser
@@ -138,7 +148,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build-dev
 docker-build-dev: ## Build docker image with the manager.
-	docker build -t temporal-operator .
+	$(CONTAINER_TOOL) build -t temporal-operator .
 
 ##@ Deployment
 
